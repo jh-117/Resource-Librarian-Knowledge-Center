@@ -38,4 +38,4 @@ export const downloadFile = async (bucket, path) => {
 
   if (error) throw error;
   return data;
-}; 
+};
