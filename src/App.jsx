@@ -15,19 +15,19 @@ function App() {
   const [session, setSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) {
         fetchUserProfile(session.user.id);
       } else {
         setLoading(false);
+        setAuthChecked(true);
       }
     });
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -37,6 +37,7 @@ function App() {
       } else {
         setUserProfile(null);
         setLoading(false);
+        setAuthChecked(true);
       }
     });
 
@@ -51,16 +52,29 @@ function App() {
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '42501' || error.code === 'PGRST301') {
+          console.warn('Permission error, creating default profile');
+          setUserProfile({
+            id: userId,
+            role: 'seeker',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+          return;
+        }
+        throw error;
+      }
       setUserProfile(data);
     } catch (error) {
       console.error('Error fetching user profile:', error);
     } finally {
       setLoading(false);
+      setAuthChecked(true);
     }
   };
 
-  if (loading) {
+  if (loading && !authChecked) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -71,40 +85,44 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/upload" element={<UploaderFlow />} />
         
-        {/* Auth Routes */}
         <Route 
           path="/admin/login" 
-          element={session ? <Navigate to="/admin/dashboard" /> : <AdminLogin />} 
+          element={
+            session && userProfile?.role === 'admin' 
+              ? <Navigate to="/admin/dashboard" replace /> 
+              : <AdminLogin />
+          } 
         />
         <Route 
           path="/seeker/login" 
-          element={session ? <Navigate to="/seeker/dashboard" /> : <SeekerLogin />} 
+          element={
+            session && userProfile 
+              ? <Navigate to="/seeker/dashboard" replace />
+              : <SeekerLogin />
+          } 
         />
         
-        {/* Protected Admin Routes */}
         <Route
           path="/admin/dashboard"
           element={
             session && userProfile?.role === 'admin' ? (
               <AdminDashboard user={session.user} profile={userProfile} />
             ) : (
-              <Navigate to="/admin/login" />
+              <Navigate to="/admin/login" replace />
             )
           }
         />
         
-        {/* Protected Seeker Routes */}
         <Route
           path="/seeker/dashboard"
           element={
             session && userProfile ? (
               <SeekerDashboard user={session.user} profile={userProfile} />
             ) : (
-              <Navigate to="/seeker/login" />
+              <Navigate to="/seeker/login" replace />
             )
           }
         />
@@ -115,16 +133,15 @@ function App() {
             session && userProfile ? (
               <ResourceDetail user={session.user} profile={userProfile} />
             ) : (
-              <Navigate to="/seeker/login" />
+              <Navigate to="/seeker/login" replace />
             )
           }
         />
         
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
 }
 
-export default App; 
+export default App;
