@@ -10,40 +10,51 @@ function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+ const handleLogin = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError('');
 
-    try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+  try {
+    // 1. Login first
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-      if (authError) throw authError;
+    if (authError) throw authError;
 
-      // Check if user is admin
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('id', authData.user.id)
-        .single();
+    // 2. CRITICAL: Refresh the session to get updated JWT
+    await supabase.auth.refreshSession();
+    
+    // 3. Wait a moment for JWT to propagate
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // 4. Now check profile
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('id', authData.user.id)
+      .single();
 
-      if (profileError) throw profileError;
-
-      if (profile.role !== 'admin') {
-        await supabase.auth.signOut();
-        throw new Error('Access denied. Admin privileges required.');
-      }
-
-      navigate('/admin/dashboard');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    if (profileError) {
+      console.error('Profile fetch error:', profileError);
+      throw new Error('Cannot access user profile. Please contact administrator.');
     }
-  };
+
+    if (profile.role !== 'admin') {
+      await supabase.auth.signOut();
+      throw new Error('Access denied. Admin privileges required.');
+    }
+
+    // 5. Navigate
+    navigate('/admin/dashboard');
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
