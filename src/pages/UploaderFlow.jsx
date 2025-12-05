@@ -106,27 +106,41 @@ function UploaderFlow() {
         uploadedFiles.push(fileName);
       } catch (error) {
         console.error('File upload error:', error);
-        alert(`Failed to upload ${file.name}`);
+        // THROW error to stop the process instead of just alerting
+        throw new Error(`Failed to upload ${file.name}. Please try again.`);
       }
     }
 
     return uploadedFiles;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    // Prevent any default form submission
+    if (e) e.preventDefault();
+    
     setSubmitting(true);
 
     try {
-      // Upload files
-      const processFileNames = formData.processFiles.length > 0 
-        ? await handleFileUpload(formData.processFiles, 'process') 
-        : [];
-      const templateFileNames = formData.templateFiles.length > 0 
-        ? await handleFileUpload(formData.templateFiles, 'template') 
-        : [];
-      const exampleFileNames = formData.exampleFiles.length > 0 
-        ? await handleFileUpload(formData.exampleFiles, 'example') 
-        : [];
+      // 1. Upload files first
+      let processFileNames = [];
+      let templateFileNames = [];
+      let exampleFileNames = [];
+
+      try {
+        if (formData.processFiles.length > 0) {
+           processFileNames = await handleFileUpload(formData.processFiles, 'process');
+        }
+        if (formData.templateFiles.length > 0) {
+           templateFileNames = await handleFileUpload(formData.templateFiles, 'template');
+        }
+        if (formData.exampleFiles.length > 0) {
+           exampleFileNames = await handleFileUpload(formData.exampleFiles, 'example');
+        }
+      } catch (uploadError) {
+        alert(uploadError.message);
+        setSubmitting(false);
+        return; // STOP HERE if upload fails
+      }
 
       // Combine selected and custom tools
       const allTools = [...formData.essentialTools];
@@ -134,7 +148,7 @@ function UploaderFlow() {
         allTools.push(formData.customTools.trim());
       }
 
-      // Insert submission
+      // 2. Insert submission
       const { data: submission, error: insertError } = await supabase
         .from('knowledge_submissions')
         .insert({
@@ -164,7 +178,14 @@ function UploaderFlow() {
 
       if (insertError) throw insertError;
 
-      // Trigger AI processing via Edge Function
+      // 3. Mark code as used
+      // (Ideally handled by database trigger, but good to be safe)
+      await supabase
+        .from('upload_codes')
+        .update({ used: true, used_at: new Date().toISOString() })
+        .eq('code', code.trim());
+
+      // 4. Trigger AI processing via Edge Function
       const { error: functionError } = await supabase.functions.invoke('process-knowledge', {
         body: { submission_id: submission.id }
       });
@@ -671,6 +692,7 @@ function UploaderFlow() {
           <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
             {step > 1 && (
               <button
+                type="button"
                 onClick={() => setStep(step - 1)}
                 className="flex items-center px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
               >
@@ -681,6 +703,7 @@ function UploaderFlow() {
             
             {step < 5 ? (
               <button
+                type="button"
                 onClick={() => {
                   // Basic validation
                   if (step === 1 && (!formData.positionLevel || !formData.department || !formData.experience || !formData.teamSize)) {
@@ -708,6 +731,7 @@ function UploaderFlow() {
               </button>
             ) : (
               <button
+                type="button" // CRITICAL: Prevent default form submission
                 onClick={handleSubmit}
                 disabled={submitting || !formData.finalAdvice}
                 className="ml-auto flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
@@ -723,4 +747,4 @@ function UploaderFlow() {
   );
 }
 
-export default UploaderFlow; 
+export default UploaderFlow;
