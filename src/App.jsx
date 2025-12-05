@@ -15,29 +15,44 @@ function App() {
   const [session, setSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        fetchUserProfile(session.user.id);
-      } else {
-        setLoading(false);
-        setAuthChecked(true);
-      }
-    });
+    // 1. Define the initialization logic
+    const initializeAuth = async () => {
+      try {
+        // Get initial session
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        setSession(initialSession);
 
+        if (initialSession) {
+          // If we have a session, we MUST wait for the profile
+          await fetchUserProfile(initialSession.user.id);
+        } else {
+          // No session, we are done loading
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        setLoading(false);
+      }
+    };
+
+    // 2. Run initialization
+    initializeAuth();
+
+    // 3. Set up the listener for future changes (sign in, sign out)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) {
-        fetchUserProfile(session.user.id);
+    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      setSession(newSession);
+
+      if (newSession) {
+        // Only fetch profile if it's not already loaded for this user
+        // This prevents double-fetching on initialization
+        await fetchUserProfile(newSession.user.id);
       } else {
         setUserProfile(null);
-        setLoading(false);
-        setAuthChecked(true);
+        setLoading(false); // Stop loading if user signs out
       }
     });
 
@@ -53,31 +68,38 @@ function App() {
         .single();
 
       if (error) {
+        // If we get the permission error (42501), it means RLS is blocking us.
+        // We shouldn't block the app, but user experience might be degraded.
         if (error.code === '42501' || error.code === 'PGRST301') {
           console.warn('Permission error, creating default profile');
           setUserProfile({
             id: userId,
-            role: 'seeker',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            role: 'seeker', // Default fallback
+            department: 'Unknown'
           });
-          return;
+        } else {
+          console.error('Error fetching user profile:', error);
         }
-        throw error;
+      } else {
+        setUserProfile(data);
       }
-      setUserProfile(data);
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('Unexpected error fetching profile:', error);
     } finally {
+      // CRITICAL: We only set loading to false AFTER profile attempt is done
       setLoading(false);
-      setAuthChecked(true);
     }
   };
 
-  if (loading && !authChecked) {
+  // 4. Global Loading State
+  // We do not render ANY routes until we are 100% sure about the auth state
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="text-gray-500 font-medium">Loading your profile...</p>
+        </div>
       </div>
     );
   }
@@ -108,6 +130,7 @@ function App() {
         <Route
           path="/admin/dashboard"
           element={
+            // Guard: Must have Session AND Admin Role
             session && userProfile?.role === 'admin' ? (
               <AdminDashboard user={session.user} profile={userProfile} />
             ) : (
@@ -119,6 +142,7 @@ function App() {
         <Route
           path="/seeker/dashboard"
           element={
+            // Guard: Must have Session AND Profile
             session && userProfile ? (
               <SeekerDashboard user={session.user} profile={userProfile} />
             ) : (
