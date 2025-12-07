@@ -122,97 +122,95 @@ function UploaderFlow() {
     return uploadedFiles;
   };
 
-  const handleSubmit = async (e) => {
-    // Prevent any default form submission
-    if (e) e.preventDefault();
-    
-    setSubmitting(true);
+const handleSubmit = async (e) => {
+  // Prevent any default form submission
+  if (e) e.preventDefault();
+  
+  setSubmitting(true);
+
+  try {
+    // 1. Upload files first
+    let processFileNames = [];
+    let templateFileNames = [];
+    let exampleFileNames = [];
 
     try {
-      // 1. Upload files first
-      let processFileNames = [];
-      let templateFileNames = [];
-      let exampleFileNames = [];
-
-      try {
-        if (formData.processFiles.length > 0) {
-           processFileNames = await handleFileUpload(formData.processFiles, 'process');
-        }
-        if (formData.templateFiles.length > 0) {
-           templateFileNames = await handleFileUpload(formData.templateFiles, 'template');
-        }
-        if (formData.exampleFiles.length > 0) {
-           exampleFileNames = await handleFileUpload(formData.exampleFiles, 'example');
-        }
-      } catch (uploadError) {
-        alert(uploadError.message);
-        setSubmitting(false);
-        return; // STOP HERE if upload fails
+      if (formData.processFiles.length > 0) {
+         processFileNames = await handleFileUpload(formData.processFiles, 'process');
       }
-
-      // Combine selected and custom tools
-      const allTools = [...formData.essentialTools];
-      if (formData.customTools.trim()) {
-        allTools.push(formData.customTools.trim());
+      if (formData.templateFiles.length > 0) {
+         templateFileNames = await handleFileUpload(formData.templateFiles, 'template');
       }
-
-      // 2. Insert submission
-      const { data: submission, error: insertError } = await supabase
-        .from('knowledge_submissions')
-        .insert({
-          upload_code: code.trim(),
-          position_level: formData.positionLevel,
-          department: formData.department,
-          experience_range: formData.experience,
-          team_size_range: formData.teamSize,
-          main_responsibilities: formData.mainResponsibilities.filter(r => r.trim()),
-          essential_tools: allTools,
-          critical_skills: formData.criticalSkills,
-          learning_resources: formData.learningPath,
-          common_problems: formData.commonProblems,
-          solutions: formData.solutions,
-          communication_methods: formData.communicationMethods,
-          collaboration_tips: formData.collaborationTips,
-          handoff_advice: formData.handoffAdvice,
-          final_advice: formData.finalAdvice,
-          allow_followup: formData.allowFollowup,
-          process_files: processFileNames,
-          template_files: templateFileNames,
-          example_files: exampleFileNames,
-          status: 'pending'
-        })
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
-
-      // 3. Mark code as used
-      // (Ideally handled by database trigger, but good to be safe)
-      await supabase
-        .from('upload_codes')
-        .update({ used: true, used_at: new Date().toISOString() })
-        .eq('code', code.trim());
-
-      // 4. Trigger AI processing via Edge Function
-      const { error: functionError } = await supabase.functions.invoke('process-knowledge', {
-        body: { submission_id: submission.id }
-      });
-
-      if (functionError) {
-        console.error('AI processing error:', functionError);
-        // Don't fail the submission if AI processing fails
+      if (formData.exampleFiles.length > 0) {
+         exampleFileNames = await handleFileUpload(formData.exampleFiles, 'example');
       }
-
-      // Show success and end session
-      setStep(6);
-    } catch (error) {
-      console.error('Submission error:', error);
-      alert('Failed to submit. Please try again.');
-    } finally {
+    } catch (uploadError) {
+      alert(uploadError.message);
       setSubmitting(false);
+      return; // STOP HERE if upload fails
     }
-  };
 
+    // Combine selected and custom tools
+    const allTools = [...formData.essentialTools];
+    if (formData.customTools.trim()) {
+      allTools.push(formData.customTools.trim());
+    }
+
+    // 2. Insert submission using RPC function (bypasses RLS)
+    const { data, error: insertError } = await supabase.rpc(
+      'insert_knowledge_submission',
+      {
+        p_upload_code: code.trim(),
+        p_position_level: formData.positionLevel,
+        p_department: formData.department,
+        p_experience_range: formData.experience,
+        p_team_size_range: formData.teamSize,
+        p_main_responsibilities: formData.mainResponsibilities.filter(r => r.trim()),
+        p_essential_tools: allTools,
+        p_critical_skills: formData.criticalSkills,
+        p_learning_resources: formData.learningPath,
+        p_common_problems: formData.commonProblems,
+        p_solutions: formData.solutions,
+        p_communication_methods: formData.communicationMethods,
+        p_collaboration_tips: formData.collaborationTips,
+        p_handoff_advice: formData.handoffAdvice,
+        p_final_advice: formData.finalAdvice,
+        p_allow_followup: formData.allowFollowup,
+        p_process_files: processFileNames,
+        p_template_files: templateFileNames,
+        p_example_files: exampleFileNames
+      }
+    );
+
+    if (insertError) {
+      console.error('Insert error:', insertError);
+      throw insertError;
+    }
+
+    // Extract the submission ID from the function result
+    const submission = { id: data.id };
+
+    console.log('✅ Submission successful:', submission);
+
+    // 3. Trigger AI processing via Edge Function
+    const { error: functionError } = await supabase.functions.invoke('process-knowledge', {
+      body: { submission_id: submission.id }
+    });
+
+    if (functionError) {
+      console.error('AI processing error:', functionError);
+      // Don't fail the submission if AI processing fails
+    }
+
+    // Show success and end session
+    setStep(6);
+  } catch (error) {
+    console.error('Submission error:', error);
+    alert('Failed to submit: ' + (error.message || 'Please try again.'));
+  } finally {
+    setSubmitting(false);
+  }
+};
   // Step 0: Code Entry
   if (step === 0) {
     return (
