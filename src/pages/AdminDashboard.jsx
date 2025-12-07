@@ -10,11 +10,14 @@ function AdminDashboard({ user, profile }) {
   const [submissions, setSubmissions] = useState([]);
   const [codes, setCodes] = useState([]);
   const [seekers, setSeekers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  
+  // UX States
+  const [loading, setLoading] = useState(true); // Global loading (full screen)
+  const [isCreating, setIsCreating] = useState(false); // Button loading (just for create)
+  
   const [newCodeGenerated, setNewCodeGenerated] = useState(null);
   const [copied, setCopied] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
-  const [isCreating, setIsCreating] = useState(false);
 
   // Stats
   const [stats, setStats] = useState({
@@ -24,7 +27,7 @@ function AdminDashboard({ user, profile }) {
     activeSeekers: 0
   });
 
-  // New seeker form
+  // New seeker form state
   const [newSeeker, setNewSeeker] = useState({
     email: '',
     password: '',
@@ -35,8 +38,10 @@ function AdminDashboard({ user, profile }) {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  // Modified fetchData to allow "silent" updates (background refresh)
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
+    
     try {
       // Fetch submissions
       const { data: submissionsData } = await supabase
@@ -75,7 +80,7 @@ function AdminDashboard({ user, profile }) {
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -96,7 +101,7 @@ function AdminDashboard({ user, profile }) {
       if (error) throw error;
 
       setNewCodeGenerated(data.code);
-      fetchData();
+      fetchData(true); // Silent refresh
     } catch (error) {
       console.error('Error generating code:', error);
       alert('Failed to generate code');
@@ -122,7 +127,7 @@ function AdminDashboard({ user, profile }) {
 
       if (error) throw error;
 
-      fetchData();
+      fetchData(true); // Silent refresh
       setSelectedSubmission(null);
       alert('Submission approved successfully!');
     } catch (error) {
@@ -146,7 +151,7 @@ function AdminDashboard({ user, profile }) {
 
       if (error) throw error;
 
-      fetchData();
+      fetchData(true); // Silent refresh
       setSelectedSubmission(null);
       alert('Submission rejected');
     } catch (error) {
@@ -155,46 +160,49 @@ function AdminDashboard({ user, profile }) {
     }
   };
 
-const createSeeker = async (e) => {
-  // 1. PREVENT PAGE RELOAD
-  e.preventDefault(); 
-
-  // 2. USE STATE VARIABLES (Not hardcoded strings)
-  // We use the 'newSeeker' state object you defined earlier
-  const email = newSeeker.email;
-  const password = newSeeker.password;
-  const role = newSeeker.department; // Mapping department to role, or use a fixed role
-
-  try {
-    setLoading(true); // Optional: Add a loading state here if you want
-
-    const { data, error } = await supabase.functions.invoke('create-seeker', {
-      body: {
-        email: email,
-        password: password,
-        role: role
-      }
-    });
-
-    if (error) throw error;
-
-    console.log('Success:', data);
-    alert('Seeker created successfully!');
+  // --- FIXED CREATE SEEKER FUNCTION ---
+  const createSeeker = async (e) => {
+    // 1. STOP PAGE RELOAD
+    e.preventDefault();
     
-    // 3. RESET FORM
-    setNewSeeker({ email: '', password: '', department: '' });
-    
-    // 4. REFRESH LIST
-    fetchData(); 
+    // 2. Start Button Loading
+    setIsCreating(true);
 
-  } catch (error) {
-    console.error('Function error:', error);
-    alert('Failed to create seeker: ' + (error.message || error));
-  } finally {
-    setLoading(false);
-  }
-};
+    // 3. Use actual form data from state
+    const email = newSeeker.email;
+    const password = newSeeker.password;
+    const role = newSeeker.department;
 
+    try {
+      const { data, error } = await supabase.functions.invoke('create-seeker', {
+        body: {
+          email: email,
+          password: password,
+          role: role
+        }
+      });
+
+      if (error) throw error;
+
+      console.log('Success:', data);
+      alert('Seeker created successfully!');
+      
+      // Clear form
+      setNewSeeker({ email: '', password: '', department: '' });
+      
+      // Refresh list without reloading page
+      await fetchData(true);
+
+    } catch (error) {
+      console.error('Function error:', error);
+      // Handle the specific error message from the Edge Function
+      const msg = error.message || 'Unknown error';
+      alert('Failed to create seeker: ' + msg);
+    } finally {
+      // 4. Stop Button Loading
+      setIsCreating(false);
+    }
+  };
   
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -399,7 +407,7 @@ const createSeeker = async (e) => {
                             <span className="text-sm text-gray-600">•</span>
                             <span className="text-sm text-gray-600">{submission.position_level}</span>
                           </div>
-                          
+                           
                           {submission.ai_summary ? (
                             <p className="text-sm text-gray-700 line-clamp-2 mb-2">
                               {submission.ai_summary}
@@ -481,7 +489,7 @@ const createSeeker = async (e) => {
               </div>
             )}
 
-            {/* Seekers Tab */}
+            {/* Seekers Tab - UPDATED */}
             {activeTab === 'seekers' && (
               <div>
                 <div className="mb-6">
@@ -514,9 +522,19 @@ const createSeeker = async (e) => {
                     </div>
                     <button
                       type="submit"
-                      className="mt-4 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                      disabled={isCreating} // Disabled when loading
+                      className={`mt-4 px-6 py-2 text-white rounded-lg flex items-center justify-center ${
+                        isCreating ? 'bg-purple-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700'
+                      }`}
                     >
-                      Create Seeker Account
+                      {isCreating ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Seeker Account'
+                      )}
                     </button>
                   </form>
                 </div>
@@ -734,4 +752,4 @@ const createSeeker = async (e) => {
   );
 }
 
-export default AdminDashboard; 
+export default AdminDashboard;
