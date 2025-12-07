@@ -154,29 +154,22 @@ function AdminDashboard({ user, profile }) {
     }
   };
 
-  const createSeeker = async (e) => {
+const createSeeker = async (e) => {
     e.preventDefault();
 
     try {
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: newSeeker.email,
-        password: newSeeker.password,
-        email_confirm: true
+      // CALL THE EDGE FUNCTION INSTEAD
+      const { data, error } = await supabase.functions.invoke('create-seeker', {
+        body: { 
+          email: newSeeker.email, 
+          password: newSeeker.password, 
+          department: newSeeker.department 
+        }
       });
 
-      if (authError) throw authError;
-
-      // Update profile
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .update({
-          department: newSeeker.department,
-          role: 'seeker'
-        })
-        .eq('id', authData.user.id);
-
-      if (profileError) throw profileError;
+      if (error) throw new Error(error.message || 'Function invocation failed');
+      // If the function returns an error in the body
+      if (data && data.error) throw new Error(data.error);
 
       alert(`Seeker account created successfully!\n\nEmail: ${newSeeker.email}\nPassword: ${newSeeker.password}\n\nShare these credentials securely.`);
       
