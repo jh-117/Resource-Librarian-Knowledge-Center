@@ -178,6 +178,8 @@ const createSeeker = async () => {
   console.log('Success:', data);
   alert('Seeker created successfully!');
 };
+
+  
   const handleSignOut = async () => {
     await supabase.auth.signOut();
   };
