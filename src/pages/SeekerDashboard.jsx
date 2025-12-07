@@ -29,8 +29,24 @@ function SeekerDashboard({ user, profile }) {
   const teamSizes = ['Just me', '2-5', '6-10', '11-20', '20+'];
 
   useEffect(() => {
-    fetchSubmissions();
-  }, []);
+  fetchSubmissions();
+
+  const channel = supabase
+    .channel('knowledge_changes')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'knowledge_submissions' },
+      () => {
+        // Just re-fetch whenever ANY change happens to this table
+        fetchSubmissions();
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, []);
 
   useEffect(() => {
     applyFilters();
