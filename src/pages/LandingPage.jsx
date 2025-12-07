@@ -121,7 +121,7 @@ function LandingPage() {
         </div>
       </div>
 
-      {/* --- UPDATED FOOTER --- */}
+      {/* --- UPDATED FOOTER (No Terms of Service) --- */}
       <footer className="bg-white border-t border-gray-200 mt-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="flex flex-col items-center justify-center space-y-6">
@@ -133,12 +133,6 @@ function LandingPage() {
                 className="hover:text-blue-600 font-medium transition-colors"
               >
                 Privacy Policy
-              </button>
-              <span className="text-gray-300">•</span>
-              <button 
-                className="hover:text-blue-600 font-medium transition-colors"
-              >
-                Terms of Service
               </button>
             </div>
 
