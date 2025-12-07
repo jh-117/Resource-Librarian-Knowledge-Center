@@ -10,6 +10,9 @@ import SeekerLogin from './pages/SeekerLogin';
 import SeekerDashboard from './pages/SeekerDashboard';
 import UploaderFlow from './pages/UploaderFlow';
 import ResourceDetail from './pages/ResourceDetail';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+
+
 
 function App() {
   const [session, setSession] = useState(null);
@@ -191,6 +194,8 @@ function App() {
         />
         
         <Route path="*" element={<Navigate to="/" replace />} />
+    
+<Route path="/privacy" element={<PrivacyPolicy />} />
       </Routes>
     </BrowserRouter>
   );
