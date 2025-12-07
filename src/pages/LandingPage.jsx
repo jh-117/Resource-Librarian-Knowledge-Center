@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Upload, Search, Shield } from 'lucide-react';
+import BackgroundMusic from './BackgroundMusic';
+//import themeMusic from '../assets/training-theme.mp3';
 
 function LandingPage() {
   const navigate = useNavigate();
