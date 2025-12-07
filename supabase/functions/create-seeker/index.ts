@@ -1,45 +1,55 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-serve(async (req) => {
-  // 1. Create a Supabase client with the SERVICE ROLE KEY
-  const supabaseAdmin = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  )
+// 1. Define CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
-  // 2. Parse the request body
-  const { email, password, department } = await req.json()
+serve(async (req) => {
+  // 2. Handle the Browser's "Preflight" (OPTIONS) request
+  // This is the step your error says is failing!
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
 
   try {
-    // 3. Create the user using the admin client
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    // 3. Get your data
+    const { email, password, role } = await req.json()
+
+    // Create the user
+    const { data, error } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: true // Auto-confirm email
+      user_metadata: { role },
+      email_confirm: true 
     })
 
-    if (authError) throw authError
+    if (error) throw error
 
-    // 4. Update the user profile with the department and role
-    const { error: profileError } = await supabaseAdmin
-      .from('user_profiles')
-      .update({ 
-        role: 'seeker',
-        department: department 
-      })
-      .eq('id', authData.user.id)
-
-    if (profileError) throw profileError
-
+    // 4. Return success WITH the CORS headers
     return new Response(
-      JSON.stringify({ message: 'Seeker created successfully', user: authData.user }),
-      { headers: { "Content-Type": "application/json" } },
+      JSON.stringify(data),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
     )
+
   } catch (error) {
+    // 5. Return errors WITH the CORS headers
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 400, headers: { "Content-Type": "application/json" } },
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400 
+      }
     )
   }
 })
