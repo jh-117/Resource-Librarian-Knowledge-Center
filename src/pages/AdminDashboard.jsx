@@ -171,14 +171,14 @@ function AdminDashboard({ user, profile }) {
     // 3. Use actual form data from state
     const email = newSeeker.email;
     const password = newSeeker.password;
-    const role = newSeeker.department;
+    const department = newSeeker.department;
 
     try {
       const { data, error } = await supabase.functions.invoke('create-seeker', {
         body: {
           email: email,
           password: password,
-          role: role
+          department: department
         }
       });
 
