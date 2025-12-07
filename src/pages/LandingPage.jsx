@@ -127,7 +127,7 @@ function LandingPage() {
             src={kadoshLogo}
             alt="Kadosh AI"
             className="mx-auto h-8"
-          />
+          
         </div>
       </div>
   );
