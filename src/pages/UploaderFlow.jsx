@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { supabase, uploadFile } from '../lib/supabase';
 import { ArrowLeft, ArrowRight, Check, Upload, X } from 'lucide-react';
 
+
+console.log('🔍 ENV CHECK:', {
+  url: import.meta.env.VITE_SUPABASE_URL,
+  hasKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
+  keyStart: import.meta.env.VITE_SUPABASE_ANON_KEY?.substring(0, 10),
+  keyLength: import.meta.env.VITE_SUPABASE_ANON_KEY?.length
+});
+
 const DEPARTMENTS = [
   'Engineering', 'Product', 'Design', 'Marketing', 'Sales', 
   'Customer Success', 'Operations', 'Finance', 'HR', 'Legal', 'Other'
