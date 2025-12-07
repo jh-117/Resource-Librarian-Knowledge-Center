@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Upload, Search, Shield } from 'lucide-react';
-import BackgroundMusic from '../components/BackgroundMusic';
 import kadoshLogo from '../assets/kadoshAI.png'
+//import BackgroundMusic from './BackgroundMusic';
 //import themeMusic from '../assets/training-theme.mp3';
 
 function LandingPage() {
@@ -121,16 +121,15 @@ function LandingPage() {
         </div>
       </div>
 
-     {/* Powered by section at the bottom */}
-        <div className="py-6 border-t border-slate-800 text-center bg-slate-950">
-          <p className="text-sm text-slate-400 mb-3">Powered by</p>
-          <img
-            src={kadoshLogo}
-            alt="Kadosh AI"
-            className="mx-auto h-8"
-          
+      {/* Footer */}
+      <footer className="bg-white border-t border-gray-200 mt-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center text-gray-600">
+            <p>&copy; 2024 Resource Librarian Knowledge Center. All rights reserved.</p>
+          </div>
         </div>
-      </div>
+      </footer>
+    </div>
   );
 }
 
