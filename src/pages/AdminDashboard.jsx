@@ -14,6 +14,7 @@ function AdminDashboard({ user, profile }) {
   const [newCodeGenerated, setNewCodeGenerated] = useState(null);
   const [copied, setCopied] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [isCreating, setIsCreating] = useState(false);
 
   // Stats
   const [stats, setStats] = useState({
