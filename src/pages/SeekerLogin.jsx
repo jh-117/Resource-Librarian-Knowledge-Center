@@ -111,9 +111,30 @@ function SeekerLogin() {
             </p>
           </div>
         </div>
+
+        
+        {/* Footer */}
+        <div className="mt-8 text-center space-y-4">
+          <button
+            onClick={() => navigate('/privacy')}
+            className="text-purple-600 hover:text-purple-700 text-sm"
+          >
+            Privacy Policy
+          </button>
+          
+          <div className="pt-4 border-t border-slate-200 max-w-md mx-auto">
+            <p className="text-sm text-slate-500 mb-3">Powered by</p>
+            <img
+              src="/src/assets/kadoshAI.png"
+              alt="Kadosh AI"
+              className="mx-auto h-8"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+  
 
 export default SeekerLogin; 
