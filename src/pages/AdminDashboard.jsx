@@ -154,33 +154,30 @@ function AdminDashboard({ user, profile }) {
     }
   };
 
-const createSeeker = async (e) => {
-    e.preventDefault();
+const createSeeker = async () => {
+  // 1. Get the values from your form inputs
+  const email = "seeker2@test.com"; // Replace with your form state
+  const password = "Test123!";      // Replace with your form state
+  const role = "Finance";           // Replace with your form state
 
-    try {
-      // CALL THE EDGE FUNCTION INSTEAD
-      const { data, error } = await supabase.functions.invoke('create-seeker', {
-        body: { 
-          email: newSeeker.email, 
-          password: newSeeker.password, 
-          department: newSeeker.department 
-        }
-      });
-
-      if (error) throw new Error(error.message || 'Function invocation failed');
-      // If the function returns an error in the body
-      if (data && data.error) throw new Error(data.error);
-
-      alert(`Seeker account created successfully!\n\nEmail: ${newSeeker.email}\nPassword: ${newSeeker.password}\n\nShare these credentials securely.`);
-      
-      setNewSeeker({ email: '', password: '', department: '' });
-      fetchData();
-    } catch (error) {
-      console.error('Error creating seeker:', error);
-      alert('Failed to create seeker account: ' + error.message);
+  // 2. Call the function using the Supabase Client
+  const { data, error } = await supabase.functions.invoke('create-seeker', {
+    body: {
+      email: email,
+      password: password,
+      role: role
     }
-  };
+  });
 
+  if (error) {
+    console.error('Function error:', error);
+    alert('Failed to create seeker: ' + error.message);
+    return;
+  }
+
+  console.log('Success:', data);
+  alert('Seeker created successfully!');
+};
   const handleSignOut = async () => {
     await supabase.auth.signOut();
   };
