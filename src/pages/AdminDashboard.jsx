@@ -154,29 +154,44 @@ function AdminDashboard({ user, profile }) {
     }
   };
 
-const createSeeker = async () => {
-  // 1. Get the values from your form inputs
-  const email = "seeker2@test.com"; // Replace with your form state
-  const password = "Test123!";      // Replace with your form state
-  const role = "Finance";           // Replace with your form state
+const createSeeker = async (e) => {
+  // 1. PREVENT PAGE RELOAD
+  e.preventDefault(); 
 
-  // 2. Call the function using the Supabase Client
-  const { data, error } = await supabase.functions.invoke('create-seeker', {
-    body: {
-      email: email,
-      password: password,
-      role: role
-    }
-  });
+  // 2. USE STATE VARIABLES (Not hardcoded strings)
+  // We use the 'newSeeker' state object you defined earlier
+  const email = newSeeker.email;
+  const password = newSeeker.password;
+  const role = newSeeker.department; // Mapping department to role, or use a fixed role
 
-  if (error) {
+  try {
+    setLoading(true); // Optional: Add a loading state here if you want
+
+    const { data, error } = await supabase.functions.invoke('create-seeker', {
+      body: {
+        email: email,
+        password: password,
+        role: role
+      }
+    });
+
+    if (error) throw error;
+
+    console.log('Success:', data);
+    alert('Seeker created successfully!');
+    
+    // 3. RESET FORM
+    setNewSeeker({ email: '', password: '', department: '' });
+    
+    // 4. REFRESH LIST
+    fetchData(); 
+
+  } catch (error) {
     console.error('Function error:', error);
-    alert('Failed to create seeker: ' + error.message);
-    return;
+    alert('Failed to create seeker: ' + (error.message || error));
+  } finally {
+    setLoading(false);
   }
-
-  console.log('Success:', data);
-  alert('Seeker created successfully!');
 };
 
   
