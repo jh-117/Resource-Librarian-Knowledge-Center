@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase, downloadFile } from '../lib/supabase';
-import { 
-  ArrowLeft, Download, Briefcase, Clock, Users, 
-  FileText, Lightbulb, MessageSquare, BookOpen 
+import {
+  ArrowLeft, Download, Briefcase, Clock, Users,
+  FileText, Lightbulb, MessageSquare, BookOpen
 } from 'lucide-react';
+import { useToast } from '../components/Toast';
 
 function ResourceDetail({ user, profile }) {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const [submission, setSubmission] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -30,7 +32,7 @@ function ResourceDetail({ user, profile }) {
       setSubmission(data);
     } catch (error) {
       console.error('Error fetching submission:', error);
-      alert('Failed to load resource');
+      addToast('Failed to load resource', 'error');
       navigate('/seeker/dashboard');
     } finally {
       setLoading(false);
@@ -50,7 +52,7 @@ function ResourceDetail({ user, profile }) {
       document.body.removeChild(a);
     } catch (error) {
       console.error('Error downloading file:', error);
-      alert('Failed to download file');
+      addToast('Failed to download file', 'error');
     }
   };
 

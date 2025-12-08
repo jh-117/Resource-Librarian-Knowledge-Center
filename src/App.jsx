@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
+import { ToastProvider } from './components/Toast';
 
 // Import pages
 import LandingPage from './pages/LandingPage';
@@ -138,66 +139,68 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/upload" element={<UploaderFlow />} />
-        
-        <Route 
-          path="/admin/login" 
-          element={
-            session && userProfile?.role === 'admin' 
-              ? <Navigate to="/admin/dashboard" replace /> 
-              : <AdminLogin />
-          } 
-        />
-        <Route 
-          path="/seeker/login" 
-          element={
-            session && userProfile 
-              ? <Navigate to="/seeker/dashboard" replace />
-              : <SeekerLogin />
-          } 
-        />
-        
-        <Route
-          path="/admin/dashboard"
-          element={
-            session && userProfile?.role === 'admin' ? (
-              <AdminDashboard user={session.user} profile={userProfile} />
-            ) : (
-              <Navigate to="/admin/login" replace />
-            )
-          }
-        />
-        
-        <Route
-          path="/seeker/dashboard"
-          element={
-            session && userProfile ? (
-              <SeekerDashboard user={session.user} profile={userProfile} />
-            ) : (
-              <Navigate to="/seeker/login" replace />
-            )
-          }
-        />
-        
-        <Route
-          path="/resource/:id"
-          element={
-            session && userProfile ? (
-              <ResourceDetail user={session.user} profile={userProfile} />
-            ) : (
-              <Navigate to="/seeker/login" replace />
-            )
-          }
-        />
-        
-        <Route path="*" element={<Navigate to="/" replace />} />
-    
-<Route path="/privacy" element={<PrivacyPolicy />} />
-      </Routes>
-    </BrowserRouter>
+    <ToastProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/upload" element={<UploaderFlow />} />
+
+          <Route
+            path="/admin/login"
+            element={
+              session && userProfile?.role === 'admin'
+                ? <Navigate to="/admin/dashboard" replace />
+                : <AdminLogin />
+            }
+          />
+          <Route
+            path="/seeker/login"
+            element={
+              session && userProfile
+                ? <Navigate to="/seeker/dashboard" replace />
+                : <SeekerLogin />
+            }
+          />
+
+          <Route
+            path="/admin/dashboard"
+            element={
+              session && userProfile?.role === 'admin' ? (
+                <AdminDashboard user={session.user} profile={userProfile} />
+              ) : (
+                <Navigate to="/admin/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/seeker/dashboard"
+            element={
+              session && userProfile ? (
+                <SeekerDashboard user={session.user} profile={userProfile} />
+              ) : (
+                <Navigate to="/seeker/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/resource/:id"
+            element={
+              session && userProfile ? (
+                <ResourceDetail user={session.user} profile={userProfile} />
+              ) : (
+                <Navigate to="/seeker/login" replace />
+              )
+            }
+          />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+
+  <Route path="/privacy" element={<PrivacyPolicy />} />
+        </Routes>
+      </BrowserRouter>
+    </ToastProvider>
   );
 }
 

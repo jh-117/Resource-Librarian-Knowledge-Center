@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, uploadFile } from '../lib/supabase';
 import { ArrowLeft, ArrowRight, Check, Upload, X } from 'lucide-react';
+import { useToast } from '../components/Toast';
 
 
 console.log('🔍 ENV CHECK:', {
@@ -33,6 +34,7 @@ const COMMUNICATION_METHODS = [
 
 function UploaderFlow() {
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const [step, setStep] = useState(0); // 0 = code entry, 1-5 = questionnaire steps
   const [code, setCode] = useState('');
   const [validatingCode, setValidatingCode] = useState(false);
@@ -145,7 +147,7 @@ const handleSubmit = async (e) => {
          exampleFileNames = await handleFileUpload(formData.exampleFiles, 'example');
       }
     } catch (uploadError) {
-      alert(uploadError.message);
+      addToast(uploadError.message, 'error');
       setSubmitting(false);
       return; // STOP HERE if upload fails
     }
@@ -206,7 +208,7 @@ const handleSubmit = async (e) => {
     setStep(6);
   } catch (error) {
     console.error('Submission error:', error);
-    alert('Failed to submit: ' + (error.message || 'Please try again.'));
+    addToast('Failed to submit: ' + (error.message || 'Please try again.'), 'error');
   } finally {
     setSubmitting(false);
   }
@@ -713,19 +715,19 @@ const handleSubmit = async (e) => {
                 onClick={() => {
                   // Basic validation
                   if (step === 1 && (!formData.positionLevel || !formData.department || !formData.experience || !formData.teamSize)) {
-                    alert('Please fill in all required fields');
+                    addToast('Please fill in all required fields', 'warning');
                     return;
                   }
                   if (step === 2 && formData.mainResponsibilities.filter(r => r.trim()).length < 3) {
-                    alert('Please provide all 3 main responsibilities');
+                    addToast('Please provide all 3 main responsibilities', 'warning');
                     return;
                   }
                   if (step === 3 && (!formData.criticalSkills.length || !formData.learningPath || !formData.commonProblems || !formData.solutions)) {
-                    alert('Please fill in all required fields');
+                    addToast('Please fill in all required fields', 'warning');
                     return;
                   }
                   if (step === 4 && (!formData.communicationMethods.length || !formData.collaborationTips || !formData.handoffAdvice)) {
-                    alert('Please fill in all required fields');
+                    addToast('Please fill in all required fields', 'warning');
                     return;
                   }
                   setStep(step + 1);

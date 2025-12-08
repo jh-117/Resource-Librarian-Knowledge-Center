@@ -1,20 +1,22 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { 
-  BookOpen, LogOut, Plus, Users, FileText, Clock, 
+import {
+  BookOpen, LogOut, Plus, Users, FileText, Clock,
   CheckCircle, XCircle, Eye, Download, UserPlus, Copy, Check
 } from 'lucide-react';
+import { useToast } from '../components/Toast';
 
 function AdminDashboard({ user, profile }) {
+  const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
   const [submissions, setSubmissions] = useState([]);
   const [codes, setCodes] = useState([]);
   const [seekers, setSeekers] = useState([]);
-  
+
   // UX States
   const [loading, setLoading] = useState(true); // Global loading (full screen)
   const [isCreating, setIsCreating] = useState(false); // Button loading (just for create)
-  
+
   const [newCodeGenerated, setNewCodeGenerated] = useState(null);
   const [copied, setCopied] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
@@ -104,7 +106,7 @@ function AdminDashboard({ user, profile }) {
       fetchData(true); // Silent refresh
     } catch (error) {
       console.error('Error generating code:', error);
-      alert('Failed to generate code');
+      addToast('Failed to generate code', 'error');
     }
   };
 
@@ -129,10 +131,10 @@ function AdminDashboard({ user, profile }) {
 
       fetchData(true); // Silent refresh
       setSelectedSubmission(null);
-      alert('Submission approved successfully!');
+      addToast('Submission approved successfully!', 'success');
     } catch (error) {
       console.error('Error approving submission:', error);
-      alert('Failed to approve submission');
+      addToast('Failed to approve submission', 'error');
     }
   };
 
@@ -153,10 +155,10 @@ function AdminDashboard({ user, profile }) {
 
       fetchData(true); // Silent refresh
       setSelectedSubmission(null);
-      alert('Submission rejected');
+      addToast('Submission rejected', 'info');
     } catch (error) {
       console.error('Error rejecting submission:', error);
-      alert('Failed to reject submission');
+      addToast('Failed to reject submission', 'error');
     }
   };
 
@@ -185,11 +187,11 @@ function AdminDashboard({ user, profile }) {
       if (error) throw error;
 
       console.log('Success:', data);
-      alert('Seeker created successfully!');
-      
+      addToast('Seeker created successfully!', 'success');
+
       // Clear form
       setNewSeeker({ email: '', password: '', department: '' });
-      
+
       // Refresh list without reloading page
       await fetchData(true);
 
@@ -197,7 +199,7 @@ function AdminDashboard({ user, profile }) {
       console.error('Function error:', error);
       // Handle the specific error message from the Edge Function
       const msg = error.message || 'Unknown error';
-      alert('Failed to create seeker: ' + msg);
+      addToast('Failed to create seeker: ' + msg, 'error');
     } finally {
       // 4. Stop Button Loading
       setIsCreating(false);
