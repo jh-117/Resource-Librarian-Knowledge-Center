@@ -21,6 +21,10 @@ function AdminDashboard({ user, profile }) {
   const [copied, setCopied] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
 
+  // Codes filter and sort
+  const [codeFilter, setCodeFilter] = useState('all'); // all, active, used, expired
+  const [codeSort, setCodeSort] = useState('newest'); // newest, oldest
+
   // Stats
   const [stats, setStats] = useState({
     totalSubmissions: 0,
@@ -449,7 +453,7 @@ function AdminDashboard({ user, profile }) {
             {/* Upload Codes Tab */}
             {activeTab === 'codes' && (
               <div>
-                <div className="mb-4 flex justify-between items-center">
+                <div className="mb-6 flex justify-between items-center">
                   <h2 className="text-xl font-semibold text-gray-900">Upload Codes</h2>
                   <button
                     onClick={generateUploadCode}
@@ -460,34 +464,137 @@ function AdminDashboard({ user, profile }) {
                   </button>
                 </div>
 
-                <div className="space-y-3">
-                  {codes.map(code => {
-                    const isExpired = new Date(code.expires_at) < new Date();
-                    return (
-                      <div
-                        key={code.code}
-                        className="flex items-center justify-between border border-gray-200 rounded-lg p-4"
-                      >
-                        <div className="flex items-center space-x-4">
-                          <code className="px-3 py-2 bg-gray-100 rounded font-mono text-sm">
-                            {code.code}
-                          </code>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            code.used ? 'bg-gray-100 text-gray-600' :
-                            isExpired ? 'bg-red-100 text-red-600' :
-                            'bg-green-100 text-green-600'
-                          }`}>
-                            {code.used ? 'Used' : isExpired ? 'Expired' : 'Active'}
-                          </span>
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {code.used ? `Used ${new Date(code.used_at).toLocaleDateString()}` : 
-                           `Expires ${new Date(code.expires_at).toLocaleDateString()}`}
-                        </div>
-                      </div>
-                    );
-                  })}
+                {/* Filter and Sort Controls */}
+                <div className="mb-6 flex flex-wrap gap-4 items-center justify-between">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setCodeFilter('all')}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        codeFilter === 'all'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      All ({codes.length})
+                    </button>
+                    <button
+                      onClick={() => setCodeFilter('active')}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        codeFilter === 'active'
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Active ({codes.filter(c => !c.used && new Date(c.expires_at) >= new Date()).length})
+                    </button>
+                    <button
+                      onClick={() => setCodeFilter('used')}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        codeFilter === 'used'
+                          ? 'bg-gray-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Used ({codes.filter(c => c.used).length})
+                    </button>
+                    <button
+                      onClick={() => setCodeFilter('expired')}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        codeFilter === 'expired'
+                          ? 'bg-red-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Expired ({codes.filter(c => !c.used && new Date(c.expires_at) < new Date()).length})
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">Sort by:</span>
+                    <select
+                      value={codeSort}
+                      onChange={(e) => setCodeSort(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="newest">Newest First</option>
+                      <option value="oldest">Oldest First</option>
+                      <option value="status">Status</option>
+                    </select>
+                  </div>
                 </div>
+
+                <div className="space-y-3">
+                  {codes
+                    .filter(code => {
+                      const isExpired = new Date(code.expires_at) < new Date();
+                      const isActive = !code.used && !isExpired;
+
+                      if (codeFilter === 'all') return true;
+                      if (codeFilter === 'active') return isActive;
+                      if (codeFilter === 'used') return code.used;
+                      if (codeFilter === 'expired') return isExpired;
+                      return true;
+                    })
+                    .sort((a, b) => {
+                      if (codeSort === 'newest') {
+                        return new Date(b.created_at) - new Date(a.created_at);
+                      }
+                      if (codeSort === 'oldest') {
+                        return new Date(a.created_at) - new Date(b.created_at);
+                      }
+                      if (codeSort === 'status') {
+                        const getStatus = (code) => {
+                          const isExpired = new Date(code.expires_at) < new Date();
+                          if (code.used) return 2;
+                          if (isExpired) return 1;
+                          return 0;
+                        };
+                        return getStatus(a) - getStatus(b);
+                      }
+                      return 0;
+                    })
+                    .map(code => {
+                      const isExpired = new Date(code.expires_at) < new Date();
+                      return (
+                        <div
+                          key={code.code}
+                          className="flex items-center justify-between border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex items-center space-x-4">
+                            <code className="px-3 py-2 bg-gray-100 rounded font-mono text-sm">
+                              {code.code}
+                            </code>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              code.used ? 'bg-gray-100 text-gray-600' :
+                              isExpired ? 'bg-red-100 text-red-600' :
+                              'bg-green-100 text-green-600'
+                            }`}>
+                              {code.used ? 'Used' : isExpired ? 'Expired' : 'Active'}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {code.used ? `Used ${new Date(code.used_at).toLocaleDateString()}` :
+                             `Expires ${new Date(code.expires_at).toLocaleDateString()}`}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+
+                {codes.filter(code => {
+                  const isExpired = new Date(code.expires_at) < new Date();
+                  const isActive = !code.used && !isExpired;
+
+                  if (codeFilter === 'all') return true;
+                  if (codeFilter === 'active') return isActive;
+                  if (codeFilter === 'used') return code.used;
+                  if (codeFilter === 'expired') return isExpired;
+                  return true;
+                }).length === 0 && (
+                  <div className="text-center py-12 text-gray-500">
+                    No codes found matching the selected filter.
+                  </div>
+                )}
               </div>
             )}
 
