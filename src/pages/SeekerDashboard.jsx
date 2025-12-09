@@ -31,14 +31,42 @@ function SeekerDashboard({ user, profile }) {
   useEffect(() => {
   fetchSubmissions();
 
+  const checkAccountStatus = async () => {
+    try {
+      const { data: profileData, error } = await supabase
+        .from('user_profiles')
+        .select('is_active')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error || !profileData || !profileData.is_active) {
+        await supabase.auth.signOut();
+        navigate('/seeker/login');
+      }
+    } catch (error) {
+      console.error('Error checking account status:', error);
+    }
+  };
+
+  checkAccountStatus();
+
   const channel = supabase
     .channel('knowledge_changes')
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'knowledge_submissions' },
       () => {
-        // Just re-fetch whenever ANY change happens to this table
         fetchSubmissions();
+      }
+    )
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'user_profiles', filter: `id=eq.${user.id}` },
+      (payload) => {
+        if (!payload.new.is_active) {
+          supabase.auth.signOut();
+          navigate('/seeker/login');
+        }
       }
     )
     .subscribe();
@@ -46,7 +74,7 @@ function SeekerDashboard({ user, profile }) {
   return () => {
     supabase.removeChannel(channel);
   };
-}, []);
+}, [user.id, navigate]);
 
   useEffect(() => {
     applyFilters();

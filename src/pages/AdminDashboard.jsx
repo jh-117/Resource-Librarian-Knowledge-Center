@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import {
   BookOpen, LogOut, Plus, Users, FileText, Clock,
-  CheckCircle, XCircle, Eye, Download, UserPlus, Copy, Check
+  CheckCircle, XCircle, Eye, Download, UserPlus, Copy, Check, UserX, UserCheck
 } from 'lucide-react';
 import { useToast } from '../components/Toast';
 
@@ -24,6 +24,9 @@ function AdminDashboard({ user, profile }) {
   // Codes filter and sort
   const [codeFilter, setCodeFilter] = useState('all'); // all, active, used, expired
   const [codeSort, setCodeSort] = useState('newest'); // newest, oldest
+
+  // Seeker filter
+  const [seekerFilter, setSeekerFilter] = useState('active'); // all, active, inactive
 
   // Stats
   const [stats, setStats] = useState({
@@ -80,7 +83,7 @@ function AdminDashboard({ user, profile }) {
         totalSubmissions: submissionsData?.length || 0,
         pendingSubmissions: submissionsData?.filter(s => s.status === 'pending').length || 0,
         approvedSubmissions: submissionsData?.filter(s => s.status === 'approved').length || 0,
-        activeSeekers: seekersData?.length || 0
+        activeSeekers: seekersData?.filter(s => s.is_active).length || 0
       });
 
     } catch (error) {
@@ -163,6 +166,38 @@ function AdminDashboard({ user, profile }) {
     } catch (error) {
       console.error('Error rejecting submission:', error);
       addToast('Failed to reject submission', 'error');
+    }
+  };
+
+  const toggleSeekerStatus = async (seekerId, currentStatus) => {
+    const action = currentStatus ? 'deactivate' : 'reactivate';
+    const confirmMessage = currentStatus
+      ? 'Are you sure you want to deactivate this seeker? They will lose access to the knowledge library.'
+      : 'Are you sure you want to reactivate this seeker?';
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      const updateData = {
+        is_active: !currentStatus,
+        deactivated_at: currentStatus ? new Date().toISOString() : null,
+        deactivated_by: currentStatus ? user.id : null
+      };
+
+      const { error } = await supabase
+        .from('user_profiles')
+        .update(updateData)
+        .eq('id', seekerId);
+
+      if (error) throw error;
+
+      addToast(`Seeker ${action}d successfully!`, 'success');
+      await fetchData(true);
+    } catch (error) {
+      console.error(`Error ${action}ing seeker:`, error);
+      addToast(`Failed to ${action} seeker`, 'error');
     }
   };
 
@@ -649,23 +684,116 @@ function AdminDashboard({ user, profile }) {
                 </div>
 
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Active Seekers ({seekers.length})</h2>
-                  <div className="space-y-2">
-                    {seekers.map(seeker => (
-                      <div
-                        key={seeker.id}
-                        className="flex items-center justify-between border border-gray-200 rounded-lg p-4"
+                  <div className="mb-6 flex justify-between items-center">
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      Seekers ({seekers.filter(s => {
+                        if (seekerFilter === 'active') return s.is_active;
+                        if (seekerFilter === 'inactive') return !s.is_active;
+                        return true;
+                      }).length})
+                    </h2>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setSeekerFilter('active')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          seekerFilter === 'active'
+                            ? 'bg-green-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
                       >
-                        <div>
-                          <p className="font-medium text-gray-900">{seeker.email}</p>
-                          <p className="text-sm text-gray-600">{seeker.department || 'No department'}</p>
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          Joined {new Date(seeker.created_at).toLocaleDateString()}
-                        </div>
-                      </div>
-                    ))}
+                        Active ({seekers.filter(s => s.is_active).length})
+                      </button>
+                      <button
+                        onClick={() => setSeekerFilter('inactive')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          seekerFilter === 'inactive'
+                            ? 'bg-red-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        Inactive ({seekers.filter(s => !s.is_active).length})
+                      </button>
+                      <button
+                        onClick={() => setSeekerFilter('all')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          seekerFilter === 'all'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        All ({seekers.length})
+                      </button>
+                    </div>
                   </div>
+
+                  <div className="space-y-2">
+                    {seekers
+                      .filter(seeker => {
+                        if (seekerFilter === 'active') return seeker.is_active;
+                        if (seekerFilter === 'inactive') return !seeker.is_active;
+                        return true;
+                      })
+                      .map(seeker => (
+                        <div
+                          key={seeker.id}
+                          className="flex items-center justify-between border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-1">
+                              <p className="font-medium text-gray-900">{seeker.email}</p>
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                seeker.is_active
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {seeker.is_active ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600">{seeker.department || 'No department'}</p>
+                            {!seeker.is_active && seeker.deactivated_at && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Deactivated {new Date(seeker.deactivated_at).toLocaleDateString()}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-sm text-gray-500">
+                              Joined {new Date(seeker.created_at).toLocaleDateString()}
+                            </div>
+                            <button
+                              onClick={() => toggleSeekerStatus(seeker.id, seeker.is_active)}
+                              className={`flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
+                                seeker.is_active
+                                  ? 'bg-red-50 text-red-700 hover:bg-red-100'
+                                  : 'bg-green-50 text-green-700 hover:bg-green-100'
+                              }`}
+                            >
+                              {seeker.is_active ? (
+                                <>
+                                  <UserX className="w-4 h-4 mr-2" />
+                                  Deactivate
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="w-4 h-4 mr-2" />
+                                  Reactivate
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+
+                  {seekers.filter(seeker => {
+                    if (seekerFilter === 'active') return seeker.is_active;
+                    if (seekerFilter === 'inactive') return !seeker.is_active;
+                    return true;
+                  }).length === 0 && (
+                    <div className="text-center py-12 text-gray-500">
+                      No seekers found matching the selected filter.
+                    </div>
+                  )}
                 </div>
               </div>
             )}

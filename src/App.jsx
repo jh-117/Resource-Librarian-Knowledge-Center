@@ -98,25 +98,25 @@ function App() {
       if (error) {
         // Handle specific error codes
         if (error.code === '42501' || error.code === 'PGRST301') {
-          console.warn('RLS Permission error (42501), using fallback profile');
-          setUserProfile({
-            id: userId,
-            role: 'seeker',
-            department: 'Unknown'
-          });
+          console.warn('RLS Permission error - likely deactivated account, signing out');
+          await supabase.auth.signOut();
+          setUserProfile(null);
         } else if (error.code === 'PGRST116') {
-          console.warn('No profile found (PGRST116), using fallback');
-          setUserProfile({
-            id: userId,
-            role: 'seeker',
-            department: 'Unknown'
-          });
+          console.warn('No profile found (PGRST116), signing out');
+          await supabase.auth.signOut();
+          setUserProfile(null);
         } else {
           console.error('Error fetching user profile:', error);
         }
       } else {
-        console.log('Profile fetched successfully:', data);
-        setUserProfile(data);
+        if (!data.is_active && data.role === 'seeker') {
+          console.warn('Account is deactivated, signing out');
+          await supabase.auth.signOut();
+          setUserProfile(null);
+        } else {
+          console.log('Profile fetched successfully:', data);
+          setUserProfile(data);
+        }
       }
     } catch (error) {
       console.error('Unexpected error fetching profile:', error);

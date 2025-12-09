@@ -16,12 +16,31 @@ function SeekerLogin() {
     setError('');
 
     try {
-      const { error: authError } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (authError) throw authError;
+
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('is_active, role')
+        .eq('id', authData.user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        throw new Error('Unable to verify account status. Please try again.');
+      }
+
+      if (!profile) {
+        throw new Error('Account not found. Please contact your administrator.');
+      }
+
+      if (!profile.is_active) {
+        await supabase.auth.signOut();
+        throw new Error('Your account has been deactivated. Please contact your administrator for assistance.');
+      }
 
       navigate('/seeker/dashboard');
     } catch (err) {
