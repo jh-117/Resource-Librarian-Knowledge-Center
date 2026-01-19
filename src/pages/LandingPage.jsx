@@ -124,35 +124,17 @@ function LandingPage() {
         </div>
       </div>
 
-      {/* --- UPDATED FOOTER (No Terms of Service) --- */}
-      <footer className="bg-white border-t border-gray-200 mt-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="flex flex-col items-center justify-center space-y-6">
-            
-            {/* Links */}
-            <div className="flex space-x-6 text-sm text-gray-600">
-              <button 
-                onClick={() => navigate('/privacy')} 
-                className="hover:text-blue-600 font-medium transition-colors"
-              >
-                Privacy Policy
-              </button>
-            </div>
-
-            {/* Powered By Section */}
-            <div className="flex flex-col items-center space-y-2">
-              <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Powered by</p>
-              <img
-                src={kadoshLogo}
-                alt="Kadosh AI"
-                className="h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
-              />
-            </div>
-
-            {/* Copyright */}
-            <p className="text-xs text-gray-400">
-              © {new Date().getFullYear()} Knowledge Librarian. All rights reserved.
-            </p>
+      {/* Footer */}
+      <footer className="bg-gray-100 border-t border-gray-200 mt-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-center space-x-2 text-gray-500">
+            <span>Copyright © {new Date().getFullYear()}</span>
+            <img
+              src={kadoshLogo}
+              alt="Kadosh AI"
+              className="h-5 w-auto object-contain"
+            />
+            <span>All rights reserved</span>
           </div>
         </div>
       </footer>
