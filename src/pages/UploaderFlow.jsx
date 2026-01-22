@@ -51,6 +51,7 @@ function UploaderFlow() {
     essentialTools: [],
     customTools: '',
     criticalSkills: [],
+    customSkills: '',
     learningPath: '',
     commonProblems: '',
     solutions: '',
@@ -158,6 +159,13 @@ const handleSubmit = async (e) => {
       allTools.push(formData.customTools.trim());
     }
 
+    // Combine selected and custom skills
+    const allSkills = [...formData.criticalSkills];
+    if (formData.customSkills.trim()) {
+      const customSkillsList = formData.customSkills.split(',').map(s => s.trim()).filter(s => s);
+      allSkills.push(...customSkillsList);
+    }
+
     // 2. Insert submission using RPC function (bypasses RLS)
     const { data, error: insertError } = await supabase.rpc(
       'insert_knowledge_submission',
@@ -169,7 +177,7 @@ const handleSubmit = async (e) => {
         p_team_size_range: formData.teamSize,
         p_main_responsibilities: formData.mainResponsibilities.filter(r => r.trim()),
         p_essential_tools: allTools,
-        p_critical_skills: formData.criticalSkills,
+        p_critical_skills: allSkills,
         p_learning_resources: formData.learningPath,
         p_common_problems: formData.commonProblems,
         p_solutions: formData.solutions,
@@ -327,38 +335,28 @@ const handleSubmit = async (e) => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Position Level *
                 </label>
-                <select
+                <input
+                  type="text"
                   value={formData.positionLevel}
                   onChange={(e) => setFormData({ ...formData, positionLevel: e.target.value })}
+                  placeholder="e.g., Senior, Manager, Director"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
-                >
-                  <option value="">Select level</option>
-                  <option value="Junior">Junior</option>
-                  <option value="Mid-level">Mid-level</option>
-                  <option value="Senior">Senior</option>
-                  <option value="Lead">Lead</option>
-                  <option value="Manager">Manager</option>
-                  <option value="Director">Director</option>
-                  <option value="Executive">Executive</option>
-                </select>
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Department *
                 </label>
-                <select
+                <input
+                  type="text"
                   value={formData.department}
                   onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                  placeholder="e.g., Engineering, Marketing, Sales"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
-                >
-                  <option value="">Select department</option>
-                  {DEPARTMENTS.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div>
@@ -496,7 +494,7 @@ const handleSubmit = async (e) => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Critical Skills (Select all that apply) *
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 mb-3">
                   {SKILLS.map(skill => (
                     <label key={skill} className="flex items-center">
                       <input
@@ -504,14 +502,14 @@ const handleSubmit = async (e) => {
                         checked={formData.criticalSkills.includes(skill)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setFormData({ 
-                              ...formData, 
-                              criticalSkills: [...formData.criticalSkills, skill] 
+                            setFormData({
+                              ...formData,
+                              criticalSkills: [...formData.criticalSkills, skill]
                             });
                           } else {
-                            setFormData({ 
-                              ...formData, 
-                              criticalSkills: formData.criticalSkills.filter(s => s !== skill) 
+                            setFormData({
+                              ...formData,
+                              criticalSkills: formData.criticalSkills.filter(s => s !== skill)
                             });
                           }
                         }}
@@ -521,6 +519,13 @@ const handleSubmit = async (e) => {
                     </label>
                   ))}
                 </div>
+                <input
+                  type="text"
+                  value={formData.customSkills}
+                  onChange={(e) => setFormData({ ...formData, customSkills: e.target.value })}
+                  placeholder="Other skills (comma separated)"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
               </div>
 
               <div>
@@ -565,33 +570,15 @@ const handleSubmit = async (e) => {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Effective Communication Methods (Select all that apply) *
+                  Effective Communication Methods *
                 </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {COMMUNICATION_METHODS.map(method => (
-                    <label key={method} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={formData.communicationMethods.includes(method)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setFormData({ 
-                              ...formData, 
-                              communicationMethods: [...formData.communicationMethods, method] 
-                            });
-                          } else {
-                            setFormData({ 
-                              ...formData, 
-                              communicationMethods: formData.communicationMethods.filter(m => m !== method) 
-                            });
-                          }
-                        }}
-                        className="mr-2"
-                      />
-                      <span className="text-sm text-gray-700">{method}</span>
-                    </label>
-                  ))}
-                </div>
+                <textarea
+                  value={Array.isArray(formData.communicationMethods) ? formData.communicationMethods.join(', ') : formData.communicationMethods}
+                  onChange={(e) => setFormData({ ...formData, communicationMethods: e.target.value.split(',').map(m => m.trim()).filter(m => m) })}
+                  placeholder="e.g., Daily standups, Weekly 1-on-1s, Slack channels, Email updates"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 h-24"
+                  required
+                />
               </div>
 
               <div>
@@ -726,7 +713,7 @@ const handleSubmit = async (e) => {
                     addToast('Please fill in all required fields', 'warning');
                     return;
                   }
-                  if (step === 4 && (!formData.communicationMethods.length || !formData.collaborationTips || !formData.handoffAdvice)) {
+                  if (step === 4 && (!formData.collaborationTips || !formData.handoffAdvice)) {
                     addToast('Please fill in all required fields', 'warning');
                     return;
                   }
